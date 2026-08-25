@@ -46,6 +46,22 @@ shelf_access(const char *path, int mode)
 #define access(path, mode) shelf_access(path, mode)
 #endif
 
+static const char *
+default_home(void)
+{
+    const char *home;
+
+#ifdef KRYON_NATIVE_PLAN9
+    home = getenv("home");
+    if(home != NULL && home[0] != '\0')
+        return home;
+#endif
+    home = getenv("HOME");
+    if(home != NULL && home[0] != '\0')
+        return home;
+    return "/";
+}
+
 static void
 copy_text(char *dst, int size, const char *src)
 {
@@ -142,6 +158,30 @@ format_size(char *out, int out_size, unsigned long long size, int is_dir)
     }
 }
 
+static void
+fill_entry_metadata(ShelfEntry *entry)
+{
+#ifdef KRYON_NATIVE_PLAN9
+    Dir *dir;
+
+    dir = dirstat((char*)entry->path);
+    if(dir == nil)
+        return;
+    entry->is_dir = (dir->mode & DMDIR) != 0;
+    entry->size = (unsigned long long)dir->length;
+    entry->readable = 1;
+    free(dir);
+#else
+    struct stat st;
+
+    if(stat(entry->path, &st) == 0) {
+        entry->is_dir = S_ISDIR(st.st_mode);
+        entry->size = (unsigned long long)st.st_size;
+        entry->readable = access(entry->path, R_OK) == 0;
+    }
+#endif
+}
+
 int
 ShelfOpenPath(ShelfApp *app, const char *path)
 {
@@ -164,7 +204,6 @@ ShelfOpenPath(ShelfApp *app, const char *path)
 
     while((de = readdir(dir)) != NULL && count < SHELF_MAX_ENTRIES) {
         ShelfEntry *entry;
-        struct stat st;
 
         if(strcmp(de->d_name, ".") == 0)
             continue;
@@ -172,11 +211,7 @@ ShelfOpenPath(ShelfApp *app, const char *path)
         memset(entry, 0, sizeof(*entry));
         copy_text(entry->name, sizeof(entry->name), de->d_name);
         join_path(entry->path, sizeof(entry->path), resolved, de->d_name);
-        if(stat(entry->path, &st) == 0) {
-            entry->is_dir = S_ISDIR(st.st_mode);
-            entry->size = (unsigned long long)st.st_size;
-            entry->readable = access(entry->path, R_OK) == 0;
-        }
+        fill_entry_metadata(entry);
         count++;
     }
     closedir(dir);
@@ -192,17 +227,14 @@ ShelfOpenPath(ShelfApp *app, const char *path)
 void
 ShelfInit(ShelfApp *app, const char *start_path)
 {
-    const char *home;
-
     if(app == NULL)
         return;
     memset(app, 0, sizeof(*app));
     app->selected = -1;
     app->width = 640;
     app->height = 420;
-    home = getenv("HOME");
     if(start_path == NULL || start_path[0] == '\0')
-        start_path = home != NULL && home[0] != '\0' ? home : "/";
+        start_path = default_home();
     if(!ShelfOpenPath(app, start_path))
         (void)ShelfOpenPath(app, "/");
 }
