@@ -6,9 +6,45 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef KRYON_NATIVE_PLAN9
 #include <strings.h>
+#endif
 #include <sys/stat.h>
 #include <unistd.h>
+
+#ifdef KRYON_NATIVE_PLAN9
+#ifndef R_OK
+#define R_OK 4
+#endif
+
+static char *
+shelf_realpath(const char *path, char *resolved)
+{
+    if(path == NULL || resolved == NULL)
+        return NULL;
+    snprintf(resolved, SHELF_PATH_MAX, "%s", path);
+    cleanname(resolved);
+    return resolved;
+}
+
+static int
+shelf_access(const char *path, int mode)
+{
+    Dir *dir;
+
+    (void)mode;
+    if(path == NULL)
+        return -1;
+    dir = dirstat((char*)path);
+    if(dir == nil)
+        return -1;
+    free(dir);
+    return 0;
+}
+
+#define realpath(path, resolved) shelf_realpath(path, resolved)
+#define access(path, mode) shelf_access(path, mode)
+#endif
 
 static void
 copy_text(char *dst, int size, const char *src)
@@ -46,10 +82,20 @@ join_path(char *out, int out_size, const char *base, const char *name)
 static void
 copy_error(char *out, int out_size, const char *path)
 {
+#ifdef KRYON_NATIVE_PLAN9
+    char err[ERRMAX];
+#endif
+
     if(out == NULL || out_size <= 0)
         return;
+#ifdef KRYON_NATIVE_PLAN9
+    errstr(err, sizeof(err));
+    snprintf(out, (size_t)out_size, "%.160s: %.80s", path != NULL ? path : "",
+             err);
+#else
     snprintf(out, (size_t)out_size, "%.160s: %.80s", path != NULL ? path : "",
              strerror(errno));
+#endif
 }
 
 static void
@@ -245,6 +291,7 @@ ShelfDraw(ShelfApp *app, Rectangle viewport)
     int row_h = 30;
     int visible;
     int max_scroll;
+    int i;
     float wheel;
 
     if(app == NULL)
@@ -293,7 +340,7 @@ ShelfDraw(ShelfApp *app, Rectangle viewport)
 
     BeginScissorMode((int)list.x, (int)list.y, (int)list.width,
                      (int)list.height);
-    for(int i = 0; i < visible && i + app->scroll < app->entry_count; i++) {
+    for(i = 0; i < visible && i + app->scroll < app->entry_count; i++) {
         int index = i + app->scroll;
         ShelfEntry *entry = &app->entries[index];
         Rectangle row = {list.x, list.y + i * row_h, list.width, row_h};

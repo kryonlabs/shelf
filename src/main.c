@@ -16,7 +16,11 @@ main(int argc, char **argv)
                     SystemThemePrefersDark());
     ApplyCurrentUITheme();
     EnsureUIDefaultFont();
+#ifdef KRYON_NATIVE_PLAN9
+    ShelfInit(&app, argc > 1 ? argv[1] : getenv("home"));
+#else
     ShelfInit(&app, argc > 1 ? argv[1] : NULL);
+#endif
     ShelfSetFocused(&app, 1);
 
     while(!WindowShouldClose()) {
