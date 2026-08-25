@@ -117,3 +117,15 @@ ShelfDestroyAppHost(AppHost *app_host)
 {
     free(app_host);
 }
+
+AppHost *
+CreateAppHost(int abi_version, const char *project_path)
+{
+    return ShelfCreateAppHost(abi_version, project_path);
+}
+
+void
+DestroyAppHost(AppHost *app_host)
+{
+    ShelfDestroyAppHost(app_host);
+}

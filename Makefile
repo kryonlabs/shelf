@@ -5,6 +5,7 @@ KRYON_BACKEND ?= raylib
 PLAN9PORT_DIR ?= /mnt/storage/Projects/plan9port
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
+RILL_APP_HOSTDIR ?= $(PREFIX)/lib/rill/apps
 INSTALL ?= install
 
 UNAME_S := $(shell uname -s 2>/dev/null)
@@ -37,6 +38,7 @@ BOX2D_A = $(ENGINE_BUILD_DIR)/vendor/box2d/src/libbox2d.a
 
 APP = $(BUILD_DIR)/bin/shelf
 HOST_LIB = $(BUILD_DIR)/lib/libshelf_host.a
+HOST_SO = $(BUILD_DIR)/lib/shelf-host.so
 TEST = $(BUILD_DIR)/tests/shelf_model_test
 APP_OBJS = $(BUILD_DIR)/src/main.o $(BUILD_DIR)/src/shelf.o
 HOST_OBJS = $(BUILD_DIR)/src/shelf.o $(BUILD_DIR)/src/shelf_host.o
@@ -72,6 +74,9 @@ else
 endif
 
 CFLAGS ?= -Wall -Wextra -O2
+ifeq ($(PLATFORM),linux)
+  CFLAGS += -fPIC
+endif
 CPPFLAGS += -Isrc -I$(ENGINE_DIR)/include \
 	$(BACKEND_CFLAGS) $(SYSTEM_THEME_CFLAGS) \
 	-DHAS_LIBOQS=1 -I$(ENGINE_BUILD_DIR)/vendor/liboqs/include \
@@ -85,7 +90,7 @@ LDLIBS += $(BACKEND_LIBS) $(BOX2D_A) $(BACKEND_LDLIBS) $(LIBOQS_A) \
 
 .PHONY: all run test clean install engine
 
-all: $(APP) $(HOST_LIB)
+all: $(APP) $(HOST_LIB) $(HOST_SO)
 
 engine:
 	$(MAKE) -C $(ENGINE_DIR) KRYON_BACKEND=$(KRYON_BACKEND) \
@@ -98,6 +103,9 @@ $(APP): engine $(APP_OBJS) $(ENGINE_LIB) $(BACKEND_LIBS) | $(BUILD_DIR)/bin
 
 $(HOST_LIB): engine $(HOST_OBJS) | $(BUILD_DIR)/lib
 	ar rcs $@ $(HOST_OBJS)
+
+$(HOST_SO): engine $(HOST_OBJS) | $(BUILD_DIR)/lib
+	$(CC) $(CFLAGS) -shared -o $@ $(HOST_OBJS)
 
 $(TEST): engine $(TEST_OBJS) $(ENGINE_LIB) $(BACKEND_LIBS) | $(BUILD_DIR)/tests
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(TEST_OBJS) \
@@ -119,9 +127,10 @@ run: $(APP)
 test: $(TEST)
 	$(TEST)
 
-install: $(APP)
-	mkdir -p $(DESTDIR)$(BINDIR)
+install: $(APP) $(HOST_SO)
+	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(RILL_APP_HOSTDIR)
 	$(INSTALL) -m 755 $(APP) $(DESTDIR)$(BINDIR)/shelf
+	$(INSTALL) -m 755 $(HOST_SO) $(DESTDIR)$(RILL_APP_HOSTDIR)/shelf-host.so
 
 clean:
 	rm -rf $(BUILD_ROOT)
