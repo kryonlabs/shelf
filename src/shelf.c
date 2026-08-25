@@ -18,6 +18,13 @@ copy_text(char *dst, int size, const char *src)
     snprintf(dst, (size_t)size, "%s", src != NULL ? src : "");
 }
 
+static Color
+opaque_color(Color color)
+{
+    color.a = 255;
+    return color;
+}
+
 static void
 join_path(char *out, int out_size, const char *base, const char *name)
 {
@@ -245,8 +252,8 @@ ShelfDraw(ShelfApp *app, Rectangle viewport)
     toolbar = (Rectangle){viewport.x, viewport.y, viewport.width, 38};
     list = (Rectangle){viewport.x, viewport.y + 39, viewport.width,
                        viewport.height - 39};
-    DrawRectangleRec(viewport, GetThemeBackground());
-    DrawRectangleRec(toolbar, GetThemeSurface());
+    DrawRectangleRec(viewport, opaque_color(GetThemeBackground()));
+    DrawRectangleRec(toolbar, opaque_color(GetThemeSurface()));
     DrawRectangle((int)viewport.x, (int)(toolbar.y + toolbar.height - 1),
                   (int)viewport.width, 1, Fade(GetThemeText(), 0.18f));
 
