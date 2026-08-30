@@ -63,6 +63,9 @@ endif
 SYSTEM_THEME_PKG := $(shell if pkg-config --exists gtk+-3.0 2>/dev/null; then printf '%s' gtk+-3.0; fi)
 SYSTEM_THEME_CFLAGS := $(shell if [ -n "$(SYSTEM_THEME_PKG)" ]; then pkg-config --cflags $(SYSTEM_THEME_PKG); fi)
 SYSTEM_THEME_LDLIBS := $(shell if [ -n "$(SYSTEM_THEME_PKG)" ]; then pkg-config --libs $(SYSTEM_THEME_PKG); fi)
+ifneq ($(SYSTEM_THEME_PKG),)
+  CPPFLAGS += -DFILE_MANAGER_HAS_GDK_PIXBUF=1
+endif
 CURL_CODEC_LDLIBS ?= $(strip \
   $(shell pkg-config --libs libbrotlidec 2>/dev/null) \
   $(shell pkg-config --libs libbrotlicommon 2>/dev/null) \

@@ -3,9 +3,9 @@
 int
 main(int argc, char **argv)
 {
-    ShelfApp app;
+    FileManager manager;
 
-    InitWindow(900, 620, "Shelf");
+    InitWindow(900, 620, "Files");
     SetTargetFPS(60);
     SetUIDefaultFontAutoLoad(1);
     RefreshSystemTheme();
@@ -17,19 +17,20 @@ main(int argc, char **argv)
     ApplyCurrentUITheme();
     EnsureUIDefaultFont();
 #ifdef KRYON_NATIVE_PLAN9
-    ShelfInit(&app, argc > 1 ? argv[1] : getenv("home"));
+    FileManagerInit(&manager, argc > 1 ? argv[1] : getenv("home"));
 #else
-    ShelfInit(&app, argc > 1 ? argv[1] : NULL);
+    FileManagerInit(&manager, argc > 1 ? argv[1] : NULL);
 #endif
-    ShelfSetFocused(&app, 1);
+    FileManagerSetFocused(&manager, 1);
 
     while(!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(GetThemeBackground());
         BeginUIFrame(GetScreenWidth(), GetScreenHeight(), 1.0f);
-        BeginUI(0x5348454c);
-        ShelfResize(&app, GetScreenWidth(), GetScreenHeight());
-        ShelfDraw(&app, (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()});
+        BeginUI(0x46494c45);
+        FileManagerResize(&manager, GetScreenWidth(), GetScreenHeight());
+        FileManagerDraw(&manager,
+                        (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()});
         EndUI();
         EndUIFrame();
         EndDrawing();
