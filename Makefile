@@ -6,6 +6,7 @@ PLAN9PORT_DIR ?= /mnt/storage/Projects/plan9port
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
 RILL_APP_HOSTDIR ?= $(PREFIX)/lib/rill/apps
+APPDIR ?= $(PREFIX)/share/applications
 INSTALL ?= install
 
 UNAME_S := $(shell uname -s 2>/dev/null)
@@ -131,9 +132,23 @@ test: $(TEST)
 	$(TEST)
 
 install: $(APP) $(HOST_SO)
-	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(RILL_APP_HOSTDIR)
+	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(RILL_APP_HOSTDIR) $(DESTDIR)$(APPDIR)
 	$(INSTALL) -m 755 $(APP) $(DESTDIR)$(BINDIR)/shelf
 	$(INSTALL) -m 755 $(HOST_SO) $(DESTDIR)$(RILL_APP_HOSTDIR)/shelf-host.so
+	{ \
+		printf '%s\n' '[Desktop Entry]'; \
+		printf '%s\n' 'Type=Application'; \
+		printf '%s\n' 'Name=Shelf'; \
+		printf '%s\n' 'Comment=Browse files'; \
+		printf '%s\n' 'Exec=$(BINDIR)/shelf'; \
+		printf '%s\n' 'Icon=system-file-manager'; \
+		printf '%s\n' 'Terminal=false'; \
+		printf '%s\n' 'Categories=System;FileManager;FileTools;'; \
+		printf '%s\n' 'MimeType=inode/directory;'; \
+		printf '%s\n' 'Keywords=files;file manager;shelf;'; \
+		printf '%s\n' 'StartupNotify=true'; \
+	} > $(DESTDIR)$(APPDIR)/shelf.desktop
+	if command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database $(DESTDIR)$(APPDIR); fi
 
 clean:
 	rm -rf $(BUILD_ROOT)
